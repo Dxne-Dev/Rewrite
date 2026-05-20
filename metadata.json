@@ -1,0 +1,6 @@
+{
+  "name": "Rewrite",
+  "description": "Connectez vos histoires Wattpad et discutez avec les personnages. Changez le destin.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
