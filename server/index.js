@@ -1,5 +1,27 @@
 import express from 'express';
 import dotenv from 'dotenv';
+import dns from 'dns';
+
+// Override dns lookup to use Google DNS due to local system DNS issues
+dns.setServers(['8.8.8.8', '8.8.4.4']);
+const originalLookup = dns.lookup;
+dns.lookup = function(hostname, options, callback) {
+  if (typeof options === 'function') {
+    callback = options;
+    options = {};
+  }
+  dns.resolve(hostname, 'A', (err, addresses) => {
+    if (err || !addresses || addresses.length === 0) {
+      return originalLookup(hostname, options, callback);
+    }
+    if (options.all) {
+      const results = addresses.map(addr => ({ address: addr, family: 4 }));
+      callback(null, results);
+    } else {
+      callback(null, addresses[0], 4);
+    }
+  });
+};
 
 dotenv.config();
 
