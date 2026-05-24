@@ -116,7 +116,7 @@ export default function ChatDemo({ isBetaUnlocked, onOpenForm }: ChatDemoProps) 
           setHeaderStatus('Écrit...');
         }, 1000);
 
-        // 2. After 2.5s, post the first message
+        // 2. After 2.6s, post the first message
         const t2 = setTimeout(() => {
           setIsTyping(false);
           setHeaderStatus('En ligne');
@@ -126,7 +126,7 @@ export default function ChatDemo({ isBetaUnlocked, onOpenForm }: ChatDemoProps) 
               id: 'msg1',
               role: 'assistant',
               type: 'incoming',
-              text: 'Tu es en retard.',
+              text: 'Il est assis derrière son immense bureau en acajou. Ses yeux sombres se lèvent lentement sur toi, t\'analysant de haut en bas sans un mot. Le silence de la pièce est lourd. "Tu es en retard," dit-il d\'une voix basse et tranchante.',
             }
           ]);
         }, 2600);
@@ -147,7 +147,7 @@ export default function ChatDemo({ isBetaUnlocked, onOpenForm }: ChatDemoProps) 
               id: 'msg2',
               role: 'assistant',
               type: 'incoming',
-              text: 'Donne-moi une raison de ne pas te virer avant même que tu ne sois assise.',
+              text: 'Il croise ses bras, adossé contre son fauteuil en cuir noir. Dehors, l\'alarme incendie retentit soudainement, mais il ne cille pas, maintenant un contact visuel magnétique. "Donne-moi une seule raison de ne pas te renvoyer chez toi avant même que tu n\'aies posé tes affaires."',
             },
             {
               id: 'choices1',
@@ -159,7 +159,7 @@ export default function ChatDemo({ isBetaUnlocked, onOpenForm }: ChatDemoProps) 
           setApiHistory([
             {
               role: 'assistant',
-              content: "Tu es en retard. Donne-moi une raison de ne pas te virer avant même que tu ne sois assise.",
+              content: 'Il est assis derrière son immense bureau en acajou. Ses yeux sombres se lèvent lentement sur toi, t\'analysant de haut en bas sans un mot. Le silence de la pièce est lourd. "Tu es en retard," dit-il d\'une voix basse et tranchante. Il croise ses bras, adossé contre son fauteuil en cuir noir. Dehors, l\'alarme incendie retentit soudainement, mais il ne cille pas, maintenant un contact visuel magnétique. "Donne-moi une seule raison de ne pas te renvoyer chez toi avant même que tu n\'aies posé tes affaires."',
             },
           ]);
         }, 5200);
@@ -183,13 +183,13 @@ export default function ChatDemo({ isBetaUnlocked, onOpenForm }: ChatDemoProps) 
             id: 'msg1',
             role: 'assistant',
             type: 'incoming',
-            text: 'Tu es en retard.',
+            text: 'Il est assis derrière son immense bureau en acajou. Ses yeux sombres se lèvent lentement sur toi, t\'analysant de haut en bas sans un mot. Le silence de la pièce est lourd. "Tu es en retard," dit-il d\'une voix basse et tranchante.',
           },
           {
             id: 'msg2',
             role: 'assistant',
             type: 'incoming',
-            text: 'Donne-moi une raison de ne pas te virer avant même que tu ne sois assise.',
+            text: 'Il croise ses bras, adossé contre son fauteuil en cuir noir. Dehors, l\'alarme incendie retentit soudainement, mais il ne cille pas, maintenant un contact visuel magnétique. "Donne-moi une seule raison de ne pas te renvoyer chez toi avant même que tu n\'aies posé tes affaires."',
           },
           {
             id: 'choices1',
@@ -201,7 +201,7 @@ export default function ChatDemo({ isBetaUnlocked, onOpenForm }: ChatDemoProps) 
         setApiHistory([
           {
             role: 'assistant',
-            content: "Tu es en retard. Donne-moi une raison de ne pas te virer avant même que tu ne sois assise.",
+            content: 'Il est assis derrière son immense bureau en acajou. Ses yeux sombres se lèvent lentement sur toi, t\'analysant de haut en bas sans un mot. Le silence de la pièce est lourd. "Tu es en retard," dit-il d\'une voix basse et tranchante. Il croise ses bras, adossé contre son fauteuil en cuir noir. Dehors, l\'alarme incendie retentit soudainement, mais il ne cille pas, maintenant un contact visuel magnétique. "Donne-moi une seule raison de ne pas te renvoyer chez toi avant même que tu n\'aies posé tes affaires."',
           },
         ]);
       }
@@ -218,13 +218,13 @@ export default function ChatDemo({ isBetaUnlocked, onOpenForm }: ChatDemoProps) 
           id: 'msg1',
           role: 'assistant',
           type: 'incoming',
-          text: 'Tu es en retard.',
+          text: 'Il est assis derrière son immense bureau en acajou. Ses yeux sombres se lèvent lentement sur toi, t\'analysant de haut en bas sans un mot. Le silence de la pièce est lourd. "Tu es en retard," dit-il d\'une voix basse et tranchante.',
         },
         {
           id: 'msg2',
           role: 'assistant',
           type: 'incoming',
-          text: 'Donne-moi une raison de ne pas te virer avant même que tu ne sois assise.',
+          text: 'Il croise ses bras, adossé contre son fauteuil en cuir noir. Dehors, l\'alarme incendie retentit soudainement, mais il ne cille pas, maintenant un contact visuel magnétique. "Donne-moi une seule raison de ne pas te renvoyer chez toi avant même que tu n\'aies posé tes affaires."',
         },
       ]);
     }
