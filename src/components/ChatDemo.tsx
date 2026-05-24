@@ -3,6 +3,7 @@ import { Send } from 'lucide-react';
 
 interface Message {
   id: string;
+  role: 'user' | 'assistant';
   type: 'narrator' | 'incoming' | 'outgoing' | 'choices';
   text?: string;
   choices?: string[];
@@ -13,310 +14,257 @@ type ChatDemoProps = {
   onOpenForm: () => void;
 };
 
+// Initial choices shown to the user at the start
+const INITIAL_CHOICES = [
+  "Je m'excuse platement et je m'assieds.",
+  "Peut-être que je vaux le retard.",
+  "Je sors immédiatement sans un mot.",
+];
+
+async function streamGroqResponse(
+  messages: { role: 'user' | 'assistant'; content: string }[],
+  onChunk: (chunk: string) => void,
+  onDone: () => void,
+  onError: (err: string) => void
+) {
+  try {
+    const response = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ messages }),
+    });
+
+    if (!response.ok || !response.body) {
+      onError('Erreur serveur');
+      return;
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      const chunk = decoder.decode(value, { stream: true });
+      const lines = chunk.split('\n').filter((l) => l.trim() !== '');
+
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
+        const data = line.slice(6);
+        if (data === '[DONE]') {
+          onDone();
+          return;
+        }
+        try {
+          const parsed = JSON.parse(data);
+          if (parsed.error) {
+            onError(parsed.error);
+            return;
+          }
+          const content = parsed.choices?.[0]?.delta?.content;
+          if (content) onChunk(content);
+        } catch {
+          // skip malformed JSON
+        }
+      }
+    }
+    onDone();
+  } catch (err) {
+    onError('Erreur de connexion');
+  }
+}
+
 export default function ChatDemo({ isBetaUnlocked, onOpenForm }: ChatDemoProps) {
   const [messages, setMessages] = useState<Message[]>([]);
+  // API history sent to Groq (role/content only)
+  const [apiHistory, setApiHistory] = useState<{ role: 'user' | 'assistant'; content: string }[]>([]);
   const [isTyping, setIsTyping] = useState(false);
   const [progress, setProgress] = useState(0);
   const [inputValue, setInputValue] = useState('');
   const [headerStatus, setHeaderStatus] = useState('En ligne');
+  const [streamingText, setStreamingText] = useState('');
   const feedRef = useRef<HTMLDivElement>(null);
 
-  // Auto scroll to bottom of the feed
+  // Auto scroll to bottom
   useEffect(() => {
     if (feedRef.current) {
       feedRef.current.scrollTop = feedRef.current.scrollHeight;
     }
-  }, [messages, isTyping]);
+  }, [messages, isTyping, streamingText]);
 
-  // Run demo when unlocked
+  // Init on unlock
   useEffect(() => {
-    let active = true;
-
-    async function runDemo() {
-      // Clear messages if needed
-      setMessages([]);
-      // 1. Wait 600ms
-      await new Promise((r) => setTimeout(r, 600));
-      if (!active) return;
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: 'n1',
-          type: 'narrator',
-          text: "Tu arrives en retard à ton entretien d'embauche. La porte est entrouverte.",
-        },
-      ]);
-
-      // 2. Wait 1000ms, then show typing
-      await new Promise((r) => setTimeout(r, 1000));
-      if (!active) return;
-      setIsTyping(true);
-      setHeaderStatus('Écrit...');
-
-      // 3. Wait 1400ms, then hide typing & add message
-      await new Promise((r) => setTimeout(r, 1400));
-      if (!active) return;
-      setIsTyping(false);
-      setHeaderStatus('En ligne');
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: 'msg1',
-          type: 'incoming',
-          text: 'Tu es en retard.',
-        },
-      ]);
-
-      // 4. Wait 900ms, then show typing
-      await new Promise((r) => setTimeout(r, 900));
-      if (!active) return;
-      setIsTyping(true);
-      setHeaderStatus('Écrit...');
-
-      // 5. Wait 1200ms, then hide typing & add message
-      await new Promise((r) => setTimeout(r, 1200));
-      if (!active) return;
-      setIsTyping(false);
-      setHeaderStatus('En ligne');
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: 'msg2',
-          type: 'incoming',
-          text: 'Donne-moi une raison de ne pas te virer avant même que tu ne sois assise.',
-        },
-      ]);
-
-      // 6. Wait 800ms
-      await new Promise((r) => setTimeout(r, 800));
-      if (!active) return;
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: 'n2',
-          type: 'narrator',
-          text: "Il lève les yeux de son téléphone. C'est lui — l'homme du métro ce matin.",
-        },
-      ]);
-
-      // 7. Wait 700ms, then show choices
-      await new Promise((r) => setTimeout(r, 700));
-      if (!active) return;
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: 'choices1',
-          type: 'choices',
-          choices: [
-            "Je m'excuse platement et je m'assieds.",
-            "Peut-être que je vaux le retard.",
-            "Je sors immédiatement sans un mot.",
-          ],
-        },
-      ]);
-    }
-
     if (isBetaUnlocked) {
-      runDemo();
-    } else {
-      // Set some initial blurred background messages
       setMessages([
         {
           id: 'n1',
+          role: 'assistant',
           type: 'narrator',
-          text: "Tu arrives en retard à ton entretien d'embauche. La porte est entrouverte.",
+          text: "Tu arrives en retard à ton entretien d'embauche. La porte est entrouverte. Il est là.",
         },
         {
           id: 'msg1',
+          role: 'assistant',
           type: 'incoming',
           text: 'Tu es en retard.',
         },
         {
           id: 'msg2',
+          role: 'assistant',
           type: 'incoming',
           text: 'Donne-moi une raison de ne pas te virer avant même que tu ne sois assise.',
-        }
+        },
+        {
+          id: 'choices1',
+          role: 'assistant',
+          type: 'choices',
+          choices: INITIAL_CHOICES,
+        },
+      ]);
+      setApiHistory([
+        {
+          role: 'assistant',
+          content: "Tu es en retard. Donne-moi une raison de ne pas te virer avant même que tu ne sois assise.",
+        },
+      ]);
+    } else {
+      // Static preview behind blur
+      setMessages([
+        {
+          id: 'n1',
+          role: 'assistant',
+          type: 'narrator',
+          text: "Tu arrives en retard à ton entretien d'embauche. La porte est entrouverte.",
+        },
+        {
+          id: 'msg1',
+          role: 'assistant',
+          type: 'incoming',
+          text: 'Tu es en retard.',
+        },
+        {
+          id: 'msg2',
+          role: 'assistant',
+          type: 'incoming',
+          text: 'Donne-moi une raison de ne pas te virer avant même que tu ne sois assise.',
+        },
       ]);
     }
-
-    return () => {
-      active = false;
-    };
   }, [isBetaUnlocked]);
 
-  // Handle choice selection
-  const handleChoice = async (choiceText: string) => {
-    // 1. Add player's selection to messages
-    const outgoingId = 'out-' + Date.now();
-    setMessages((prev) => [
-      // Filter out any existing active choice blocks
-      ...prev.filter((m) => m.type !== 'choices'),
-      {
-        id: outgoingId,
-        type: 'outgoing',
-        text: choiceText,
-      },
-    ]);
+  const sendMessage = async (userText: string) => {
+    if (isTyping) return;
 
-    // 2. Update progress
-    setProgress(1);
+    const outId = 'out-' + Date.now();
 
-    // 3. Show typing indicator
-    setIsTyping(true);
-    setHeaderStatus('Écrit...');
-
-    // 4. Alexandre responses based on selection
-    await new Promise((r) => setTimeout(r, 1500));
-    setIsTyping(false);
-    setHeaderStatus('En ligne');
-
-    let replyText = '';
-    let followUpNarrator = '';
-
-    if (choiceText.includes('excuse')) {
-      replyText = 'Bien. Installe-toi. Ne me fais plus perdre mon temps.';
-      followUpNarrator = 'Vous vous asseyez, votre cœur battant la chamade. Ses yeux sombres ne vous lâchent pas d\'une semelle.';
-    } else if (choiceText.includes('vaux')) {
-      replyText = 'De l\'audace... Ou de l\'arrogance ? Nous allons voir si ton CV est à la hauteur de ton culot.';
-      followUpNarrator = 'Un demi-sourire presque imperceptible apparaît sur ses lèvres glaciales. Le jeu commence.';
-    } else {
-      replyText = 'Une fuite ? C\'est probablement la décision la plus intelligente que tu aies prise aujourd\'hui.';
-      followUpNarrator = 'Vous faites demi-tour. Mais avant que vous ne franchissiez le seuil, la porte se referme brusquement.';
-    }
-
-    setMessages((prev) => [
-      ...prev,
-      {
-        id: 'reply-' + Date.now(),
-        type: 'incoming',
-        text: replyText,
-      },
-    ]);
-
-    // Follow up narrator message
-    await new Promise((r) => setTimeout(r, 800));
-    setMessages((prev) => [
-      ...prev,
-      {
-        id: 'narrator-' + Date.now(),
-        type: 'narrator',
-        text: followUpNarrator,
-      },
-    ]);
-
-    // Show follow up choices
-    await new Promise((r) => setTimeout(r, 1000));
-    setMessages((prev) => [
-      ...prev,
-      {
-        id: 'choices2-' + Date.now(),
-        type: 'choices',
-        choices: [
-          'Le regarder droit dans les yeux et relever le défi.',
-          'Garder la tête basse et rester strictement professionnelle.',
-        ],
-      },
-    ]);
-  };
-
-  // Handle follow up choice selections
-  const handleFollowUpChoice = async (choiceText: string) => {
+    // Add user message, remove choices
     setMessages((prev) => [
       ...prev.filter((m) => m.type !== 'choices'),
-      {
-        id: 'out-f-' + Date.now(),
-        type: 'outgoing',
-        text: choiceText,
-      },
+      { id: outId, role: 'user', type: 'outgoing', text: userText },
     ]);
 
-    setProgress(2);
-    setIsTyping(true);
-    setHeaderStatus('Écrit...');
-
-    await new Promise((r) => setTimeout(r, 1800));
-    setIsTyping(false);
-    setHeaderStatus('En ligne');
-
-    let reply = '';
-    if (choiceText.includes('regarder') || choiceText.includes('défie')) {
-      reply = 'Ta détermination m\'amuse. Parlons de ton expérience... si tu arrives à garder ton sang-froid.';
-    } else {
-      reply = 'Sage décision. Commençons par analyser tes compétences techniques.';
-    }
-
-    setMessages((prev) => [
-      ...prev,
-      {
-        id: 'reply-f-' + Date.now(),
-        type: 'incoming',
-        text: reply,
-      },
-    ]);
-
-    await new Promise((r) => setTimeout(r, 800));
-    setMessages((prev) => [
-      ...prev,
-      {
-        id: 'n-end-' + Date.now(),
-        type: 'narrator',
-        text: 'La conversation se poursuit. Votre destin au sein de Moreau Enterprises commence à se dessiner...',
-      },
-    ]);
-  };
-
-  // Handle custom typing submit
-  const handleSendMessage = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!inputValue.trim()) return;
-
-    const text = inputValue;
-    setInputValue('');
-
-    // Remove active choices
-    setMessages((prev) => [
-      ...prev.filter((m) => m.type !== 'choices'),
-      {
-        id: 'custom-' + Date.now(),
-        type: 'outgoing',
-        text: text,
-      },
-    ]);
-
+    const newHistory: { role: 'user' | 'assistant'; content: string }[] = [
+      ...apiHistory,
+      { role: 'user', content: userText },
+    ];
+    setApiHistory(newHistory);
     setProgress((p) => Math.min(10, p + 1));
+
+    // Show typing
     setIsTyping(true);
     setHeaderStatus('Écrit...');
 
-    await new Promise((r) => setTimeout(r, 1600));
-    setIsTyping(false);
-    setHeaderStatus('En ligne');
+    // Small delay before streaming starts (feels more natural)
+    await new Promise((r) => setTimeout(r, 600));
 
+    // Create streaming message placeholder
+    const streamId = 'stream-' + Date.now();
     setMessages((prev) => [
       ...prev,
-      {
-        id: 'custom-reply-' + Date.now(),
-        type: 'incoming',
-        text: 'Intéressant. Tu ne manques pas de répartie. Voyons comment tu te débrouilles sous pression.',
-      },
+      { id: streamId, role: 'assistant', type: 'incoming', text: '' },
     ]);
+    setIsTyping(false);
+
+    let fullText = '';
+
+    await streamGroqResponse(
+      newHistory,
+      // onChunk
+      (chunk) => {
+        fullText += chunk;
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === streamId ? { ...m, text: fullText } : m
+          )
+        );
+      },
+      // onDone
+      () => {
+        setHeaderStatus('En ligne');
+        setApiHistory((prev) => [
+          ...prev,
+          { role: 'assistant', content: fullText },
+        ]);
+        setProgress((p) => Math.min(10, p + 1));
+
+        // Add follow-up choices after a short pause
+        setTimeout(() => {
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: 'choices-' + Date.now(),
+              role: 'assistant',
+              type: 'choices',
+              choices: [
+                'Le regarder droit dans les yeux.',
+                'Baisser la tête, rester professionnelle.',
+                'Tenter de partir.',
+              ],
+            },
+          ]);
+        }, 800);
+      },
+      // onError
+      (err) => {
+        setHeaderStatus('En ligne');
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === streamId
+              ? { ...m, text: `[Erreur: ${err}]` }
+              : m
+          )
+        );
+      }
+    );
+  };
+
+  const handleChoice = (choice: string) => {
+    sendMessage(choice);
+  };
+
+  const handleSendMessage = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!inputValue.trim() || isTyping) return;
+    const text = inputValue.trim();
+    setInputValue('');
+    sendMessage(text);
   };
 
   return (
     <section className="py-16 px-4 md:px-6 relative flex flex-col items-center bg-black/60">
       <div className="w-full max-w-5xl h-[650px] rounded-2xl border border-app-border overflow-hidden flex bg-app-bg text-[15px] shadow-2xl relative z-10">
-        
+
         {/* Blur Unlock Overlay */}
-        <div 
+        <div
           className={`absolute inset-0 bg-neutral-950/40 backdrop-blur-xl z-30 flex flex-col items-center justify-center p-6 text-center transition-all duration-1000 ease-in-out ${
             isBetaUnlocked ? 'opacity-0 pointer-events-none scale-95 blur-md' : 'opacity-100 scale-100'
           }`}
         >
           <div className="max-w-md bg-neutral-950/80 border border-purple-500/20 rounded-3xl p-8 shadow-[0_0_50px_rgba(168,85,247,0.15)] flex flex-col items-center gap-6 relative overflow-hidden backdrop-blur-md">
-            {/* Glow backgrounds inside the overlay card */}
             <div className="absolute -top-24 -left-24 w-48 h-48 bg-purple-500/20 rounded-full blur-[60px] pointer-events-none" />
             <div className="absolute -bottom-24 -right-24 w-48 h-48 bg-blue-500/20 rounded-full blur-[60px] pointer-events-none" />
-            
-            {/* Lock icon with violet pulse */}
+
             <div className="w-16 h-16 rounded-full bg-neutral-900 border border-purple-500/30 flex items-center justify-center relative shadow-[0_0_20px_rgba(168,85,247,0.2)] shrink-0">
               <div className="absolute inset-0 rounded-full bg-purple-500/20 animate-ping opacity-60" />
               <svg className="w-6 h-6 text-purple-400 relative z-10" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
@@ -325,7 +273,6 @@ export default function ChatDemo({ isBetaUnlocked, onOpenForm }: ChatDemoProps) 
               </svg>
             </div>
 
-            {/* Content */}
             <div className="flex flex-col gap-2 relative z-10">
               <h3 className="text-xl md:text-2xl font-serif font-medium text-white tracking-wide">
                 Prêt à réécrire l'histoire ?
@@ -335,7 +282,6 @@ export default function ChatDemo({ isBetaUnlocked, onOpenForm }: ChatDemoProps) 
               </p>
             </div>
 
-            {/* CTA Button */}
             <button
               type="button"
               onClick={onOpenForm}
@@ -352,7 +298,6 @@ export default function ChatDemo({ isBetaUnlocked, onOpenForm }: ChatDemoProps) 
 
         {/* Sidebar */}
         <aside className="hidden sm:flex w-[280px] min-w-[280px] bg-app-sidebar border-r border-app-border flex-col overflow-hidden">
-          {/* Book Header */}
           <div className="px-5 pt-5 pb-4 border-b border-app-border shrink-0">
             <div className="text-[11px] font-medium tracking-[1.5px] uppercase text-app-text-dim mb-3.5">
               En lecture
@@ -369,7 +314,6 @@ export default function ChatDemo({ isBetaUnlocked, onOpenForm }: ChatDemoProps) 
             </div>
           </div>
 
-          {/* Synopsis */}
           <div className="flex-1 overflow-y-auto px-5 py-4 no-scrollbar">
             <div className="text-[10px] font-semibold tracking-[1.5px] uppercase text-app-text-dim mb-2.5">
               Synopsis
@@ -390,7 +334,6 @@ export default function ChatDemo({ isBetaUnlocked, onOpenForm }: ChatDemoProps) 
             </div>
           </div>
 
-          {/* Progress */}
           <div className="px-5 py-3.5 border-t border-app-border shrink-0">
             <div className="flex justify-between text-[10px] text-app-text-dim tracking-[0.5px] mb-2">
               <span>Progression</span>
@@ -416,9 +359,16 @@ export default function ChatDemo({ isBetaUnlocked, onOpenForm }: ChatDemoProps) 
               </div>
               <div className="flex flex-col gap-[1px]">
                 <h1 className="text-[15px] font-semibold text-app-text tracking-[0.2px] leading-tight">
-                  Alexandre Moreau
+                  Alexander Thorne
                 </h1>
-                <span className="text-[11px] text-app-text-dim leading-tight">
+                <span className="text-[11px] text-app-text-dim leading-tight flex items-center gap-1.5">
+                  {headerStatus === 'Écrit...' && (
+                    <span className="inline-flex gap-[3px]">
+                      <span className="w-1 h-1 rounded-full bg-purple-400 animate-bounce [animation-delay:0ms]" />
+                      <span className="w-1 h-1 rounded-full bg-purple-400 animate-bounce [animation-delay:150ms]" />
+                      <span className="w-1 h-1 rounded-full bg-purple-400 animate-bounce [animation-delay:300ms]" />
+                    </span>
+                  )}
                   {headerStatus}
                 </span>
               </div>
@@ -456,12 +406,15 @@ export default function ChatDemo({ isBetaUnlocked, onOpenForm }: ChatDemoProps) 
 
               if (msg.type === 'incoming') {
                 return (
-                  <div
-                    key={msg.id}
-                    className="flex flex-col gap-[1px] items-start animate-bubble-in"
-                  >
+                  <div key={msg.id} className="flex flex-col gap-[1px] items-start animate-bubble-in">
                     <div className="bubble incoming max-w-[70%] py-2.5 px-3.5 rounded-[18px] text-[15px] leading-[1.45] text-app-text">
-                      {msg.text}
+                      {msg.text || (
+                        <span className="flex gap-1 items-center">
+                          <span className="typing-dot" />
+                          <span className="typing-dot" />
+                          <span className="typing-dot" />
+                        </span>
+                      )}
                     </div>
                   </div>
                 );
@@ -469,10 +422,7 @@ export default function ChatDemo({ isBetaUnlocked, onOpenForm }: ChatDemoProps) 
 
               if (msg.type === 'outgoing') {
                 return (
-                  <div
-                    key={msg.id}
-                    className="flex flex-col gap-[1px] items-end animate-bubble-in"
-                  >
+                  <div key={msg.id} className="flex flex-col gap-[1px] items-end animate-bubble-in">
                     <div className="bubble outgoing max-w-[70%] py-2.5 px-3.5 rounded-[18px] text-[15px] leading-[1.45] text-app-text">
                       {msg.text}
                     </div>
@@ -482,24 +432,16 @@ export default function ChatDemo({ isBetaUnlocked, onOpenForm }: ChatDemoProps) 
 
               if (msg.type === 'choices' && msg.choices) {
                 return (
-                  <div
-                    key={msg.id}
-                    className="self-start max-w-[82%] my-2 flex flex-col gap-[7px] animate-bubble-in"
-                  >
+                  <div key={msg.id} className="self-start max-w-[82%] my-2 flex flex-col gap-[7px] animate-bubble-in">
                     <div className="text-[11px] text-app-text-dim px-1 font-medium">
                       Choisissez une réponse rapide ou écrivez librement ↓
                     </div>
                     {msg.choices.map((choice, i) => (
                       <button
                         key={i}
-                        onClick={() => {
-                          if (msg.id.startsWith('choices2')) {
-                            handleFollowUpChoice(choice);
-                          } else {
-                            handleChoice(choice);
-                          }
-                        }}
-                        className="bg-app-sidebar border border-app-border rounded-[18px] py-[9px] px-4 text-[14px] text-app-blue cursor-pointer transition-all duration-150 text-left w-fit max-w-full flex items-center gap-2 hover:bg-[rgba(10,132,255,0.12)] hover:border-[rgba(10,132,255,0.4)] hover:scale-[1.02] active:scale-[0.98]"
+                        onClick={() => handleChoice(choice)}
+                        disabled={isTyping}
+                        className="bg-app-sidebar border border-app-border rounded-[18px] py-[9px] px-4 text-[14px] text-app-blue cursor-pointer transition-all duration-150 text-left w-fit max-w-full flex items-center gap-2 hover:bg-[rgba(10,132,255,0.12)] hover:border-[rgba(10,132,255,0.4)] hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-default"
                       >
                         <span className="text-[11px] font-bold text-app-text-dim min-w-[16px]">
                           0{i + 1}
@@ -514,7 +456,7 @@ export default function ChatDemo({ isBetaUnlocked, onOpenForm }: ChatDemoProps) 
               return null;
             })}
 
-            {/* Typing Indicator */}
+            {/* Typing indicator (while waiting for first chunk) */}
             {isTyping && (
               <div className="flex items-center gap-2.5 py-1 animate-bubble-in">
                 <div className="w-7 h-7 rounded-full bg-[#1a0a0a] flex items-center justify-center text-[13px] shrink-0 border border-white/10">
@@ -538,9 +480,10 @@ export default function ChatDemo({ isBetaUnlocked, onOpenForm }: ChatDemoProps) 
               <textarea
                 className="flex-1 bg-transparent border-none outline-none text-app-text text-[15px] resize-none min-h-[22px] max-h-[120px] leading-[1.4] no-scrollbar p-0 placeholder:text-app-text-dim focus:ring-0"
                 id="msgInput"
-                placeholder="Réponds…"
+                placeholder={isTyping ? 'Alexander répond...' : 'Réponds…'}
                 rows={1}
                 value={inputValue}
+                disabled={isTyping}
                 onChange={(e) => setInputValue(e.target.value)}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && !e.shiftKey) {
@@ -562,7 +505,7 @@ export default function ChatDemo({ isBetaUnlocked, onOpenForm }: ChatDemoProps) 
         </main>
       </div>
 
-      {/* Decorative ambient background glow behind desktop applet */}
+      {/* Decorative ambient glow */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full max-w-[800px] max-h-[400px] bg-purple-600/5 rounded-full blur-[100px] pointer-events-none -z-10" />
     </section>
   );

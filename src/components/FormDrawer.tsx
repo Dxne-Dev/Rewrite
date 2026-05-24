@@ -91,7 +91,7 @@ export default function FormDrawer({ open, onClose, onSuccess }: FormDrawerProps
               )}
             </div>
 
-            {loadCount >= 2 && (
+            {loadCount >= 2 ? (
               <div className="flex flex-col items-center gap-3 mt-2 shrink-0 animate-in fade-in slide-in-from-bottom-4 duration-500">
                 <p className="text-center text-sm text-neutral-300 font-medium">
                   Merci pour vos réponses ! Vous pouvez maintenant accéder à la démo.
@@ -103,6 +103,17 @@ export default function FormDrawer({ open, onClose, onSuccess }: FormDrawerProps
                   Déverrouiller la démo
                 </button>
               </div>
+            ) : (
+              !iframeLoading && open && (
+                <div className="flex flex-col items-center mt-2 shrink-0 animate-in fade-in duration-500">
+                  <button
+                    onClick={onSuccess}
+                    className="text-xs text-neutral-500 hover:text-purple-400 transition-colors cursor-pointer underline underline-offset-4"
+                  >
+                    Formulaire soumis ? Cliquez ici pour forcer le déverrouillage
+                  </button>
+                </div>
+              )
             )}
           </div>
         </div>
