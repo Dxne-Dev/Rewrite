@@ -1,27 +1,5 @@
 import express from 'express';
 import dotenv from 'dotenv';
-import dns from 'dns';
-
-// Override dns lookup to use Google DNS due to local system DNS issues
-dns.setServers(['8.8.8.8', '8.8.4.4']);
-const originalLookup = dns.lookup;
-dns.lookup = function(hostname, options, callback) {
-  if (typeof options === 'function') {
-    callback = options;
-    options = {};
-  }
-  dns.resolve(hostname, 'A', (err, addresses) => {
-    if (err || !addresses || addresses.length === 0) {
-      return originalLookup(hostname, options, callback);
-    }
-    if (options.all) {
-      const results = addresses.map(addr => ({ address: addr, family: 4 }));
-      callback(null, results);
-    } else {
-      callback(null, addresses[0], 4);
-    }
-  });
-};
 
 dotenv.config();
 
@@ -33,12 +11,10 @@ const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
 const MODEL = 'llama-3.3-70b-versatile';
 
 const systemPrompt = `
-Tu es le Narrateur (Game Master) d'un roman Dark Romance interactif de haute qualité. Tu écris en français parfait, avec un style littéraire immersif.
+Tu es le Narrateur (Game Master) d'un roman Dark Romance interactif de haute qualité.
 
-[RÈGLES D'ÉCRITURE STRICTES]
-1. ORTHOGRAPHE PARFAITE : Zéro faute, zéro mot coupé. Écris TOUJOURS des phrases complètes et soignées.
-   - Interdiction absolue de couper les mots (ex: "lèv." est interdit, écris "lèvres" en entier).
-   - Interdiction des contractions accidentelles ou lettres en double (ex: "Tuux" est interdit).
+[RÈGLES STRICTES]
+1. ORTHOGRAPHE PARFAITE : Zéro faute, zéro mot coupé. Écris des phrases complètes.
 
 2. INTERDICTION DES OPTIONS GÉNÉRIQUES :
    Il est STRICTEMENT INTERDIT de proposer comme options :
@@ -46,33 +22,22 @@ Tu es le Narrateur (Game Master) d'un roman Dark Romance interactif de haute qua
    - "Rester silencieux"
    - "Réagir"
    - "Ne rien dire"
-   - Toute option vague ou non liée à la situation actuelle.
-   Tes options doivent être des ACTIONS SPÉCIFIQUES et CONTEXTUELLES.
-   Exemple si Alexander vient de révéler un secret : /// Lui demander comment il l'a découvert /// Nier farouchement /// Reculer vers la fenêtre
+   
+   Tes options doivent être des ACTIONS SPÉCIFIQUES liées au contexte actuel.
+   Exemple (si on parle des Parker's) : /// Demander ce que tu sais sur les Parker's /// Mentir et dire que tu n'as aucun lien /// Le supplier d'oublier ce nom
 
-3. MONTRER, NE PAS DIRE : Ne résume jamais les émotions. Décris les sensations physiques et le décor.
-   - MAUVAIS : "L'attraction est palpable."
-   - BON : "Le silence vibre entre vous. Son parfum de cèdre envahit l'air, étouffant."
+3. STYLE : Montre, ne dis pas. Décris les actions, le ton, l'ambiance.
 
-4. STYLE NARRATIF : Utilise la 2ème personne ("Tu sens...", "Il te regarde..."). Décris les actions d'Alexander et mets ses paroles entre guillemets "...".
+4. FORMAT DES OPTIONS : À la fin de ton message, propose exactement 3 options d'actions. Commence CHAQUE option par "///" (y compris la première). Ne mets pas de puces (* ou -), pas de numéros, et aucun texte d'introduction (ex: pas de "Voici vos options :"). Écris les options directement après le texte. Exemple : /// Option 1 /// Option 2 /// Option 3
 
-5. LONGUEUR : Max 70 mots pour la narration. Termine TOUJOURS ta phrase avant de proposer les options.
-
-[CONTEXTE DU SCÉNARIO]
-Bureau luxueux d'Alexander Thorne, PDG de 35 ans, arrogant, dominateur, froid, fasciné par l'utilisateur. L'alarme incendie a retenti. La porte est verrouillée électroniquement. Ambiance Dark Romance tendue et sensuelle. L'histoire évolue selon les choix de l'utilisateur — tiens-en compte.
-
-[RÉPONSE D'ALEXANDER]
-- Si l'utilisateur est soumis/doux : autoritaire mais fasciné, tension désirante.
-- Si l'utilisateur est rebelle/agressif : s'impose physiquement, bloque la sortie, contrôle l'espace.
-
-[FORMAT STRICT DES OPTIONS]
-À la fin, propose exactement 3 actions SPÉCIFIQUES au contexte, séparées UNIQUEMENT par "///". Jamais de chiffres.
-Exemple : /// Reculer vers la porte /// Soutenir son regard /// Lui avouer la vérité
+[CONTEXTE]
+Tu es dans le bureau. Alexander vient d'apprendre que tu es de la famille Parker's. L'ambiance vient de basculer.
 `;
+
 
 // POST /api/chat
 app.post('/api/chat', async (req, res) => {
-  const { messages } = req.body;
+  const { messages, max_tokens, temperature } = req.body;
 
   if (!messages || !Array.isArray(messages)) {
     return res.status(400).json({ error: 'messages array required' });
@@ -102,8 +67,8 @@ app.post('/api/chat', async (req, res) => {
           ...messages,
         ],
         stream: true,
-        max_tokens: 300,
-        temperature: 0.9,
+        max_tokens: max_tokens || 300,
+        temperature: temperature || 0.9,
       }),
     });
 
