@@ -530,10 +530,9 @@ export default function ChatDemo({ isBetaUnlocked, onOpenForm }: ChatDemoProps) 
                   </div>
                 );
               }
-
               if (msg.type === 'choices' && msg.choices) {
                 return (
-                  <div key={msg.id} className="self-start max-w-[82%] my-2 flex flex-col gap-[7px] animate-bubble-in">
+                  <div key={msg.id} className="self-start w-full max-w-[82%] my-2 flex flex-col gap-[7px] animate-bubble-in">
                     <div className="text-[11px] text-app-text-dim px-1 font-medium">
                       Choisissez une réponse rapide ou écrivez librement ↓
                     </div>
@@ -542,19 +541,19 @@ export default function ChatDemo({ isBetaUnlocked, onOpenForm }: ChatDemoProps) 
                         key={i}
                         onClick={() => handleChoice(choice)}
                         disabled={isTyping}
-                        className="bg-app-sidebar border border-app-border rounded-[18px] py-[9px] px-4 text-[14px] text-app-blue cursor-pointer transition-all duration-150 text-left w-fit max-w-full flex items-center gap-2 hover:bg-[rgba(10,132,255,0.12)] hover:border-[rgba(10,132,255,0.4)] hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-default"
+                        className="w-full bg-app-sidebar border border-app-border rounded-[18px] py-3 px-4 text-[14px] text-app-blue cursor-pointer transition-all duration-150 text-left flex items-start gap-3 hover:bg-[rgba(10,132,255,0.12)] hover:border-[rgba(10,132,255,0.4)] hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50 disabled:cursor-default whitespace-normal break-words leading-relaxed"
                       >
-                        <span className="text-[11px] font-bold text-app-text-dim min-w-[16px]">
+                        <span className="text-[11px] font-bold text-app-text-dim mt-0.5 min-w-[16px]">
                           0{i + 1}
                         </span>
-                        <span>{choice}</span>
+                        <span className="flex-1 whitespace-normal break-words">
+                          {choice}
+                        </span>
                       </button>
                     ))}
                   </div>
                 );
-              }
-
-              return null;
+              }              return null;
             })}
 
             {/* Typing indicator (while waiting for first chunk) */}
