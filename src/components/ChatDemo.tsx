@@ -93,41 +93,118 @@ export default function ChatDemo({ isBetaUnlocked, onOpenForm }: ChatDemoProps) 
     }
   }, [messages, isTyping, streamingText]);
 
-  // Init on unlock
+  // Init on unlock with premium sequential typing animations and delays
   useEffect(() => {
     if (isBetaUnlocked) {
-      setMessages([
-        {
-          id: 'n1',
-          role: 'assistant',
-          type: 'narrator',
-          text: "Tu arrives en retard à ton entretien d'embauche. La porte est entrouverte. Il est là.",
-        },
-        {
-          id: 'msg1',
-          role: 'assistant',
-          type: 'incoming',
-          text: 'Tu es en retard.',
-        },
-        {
-          id: 'msg2',
-          role: 'assistant',
-          type: 'incoming',
-          text: 'Donne-moi une raison de ne pas te virer avant même que tu ne sois assise.',
-        },
-        {
-          id: 'choices1',
-          role: 'assistant',
-          type: 'choices',
-          choices: INITIAL_CHOICES,
-        },
-      ]);
-      setApiHistory([
-        {
-          role: 'assistant',
-          content: "Tu es en retard. Donne-moi une raison de ne pas te virer avant même que tu ne sois assise.",
-        },
-      ]);
+      // If we are transitioning from the 3 static preview messages, play the live unlock animation
+      const isLiveUnlock = messages.length === 3 && !messages.some(m => m.type === 'choices');
+
+      if (isLiveUnlock) {
+        // Clear and show only the first narrator text to start the sequence
+        setMessages([
+          {
+            id: 'n1',
+            role: 'assistant',
+            type: 'narrator',
+            text: "Tu arrives en retard à ton entretien d'embauche. La porte est entrouverte. Il est là.",
+          }
+        ]);
+
+        // 1. After 1s, show Alexander starts typing
+        const t1 = setTimeout(() => {
+          setIsTyping(true);
+          setHeaderStatus('Écrit...');
+        }, 1000);
+
+        // 2. After 2.5s, post the first message
+        const t2 = setTimeout(() => {
+          setIsTyping(false);
+          setHeaderStatus('En ligne');
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: 'msg1',
+              role: 'assistant',
+              type: 'incoming',
+              text: 'Tu es en retard.',
+            }
+          ]);
+        }, 2600);
+
+        // 3. After 3.6s, Alexander starts typing again
+        const t3 = setTimeout(() => {
+          setIsTyping(true);
+          setHeaderStatus('Écrit...');
+        }, 3600);
+
+        // 4. After 5.2s, post the second message and show the choices
+        const t4 = setTimeout(() => {
+          setIsTyping(false);
+          setHeaderStatus('En ligne');
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: 'msg2',
+              role: 'assistant',
+              type: 'incoming',
+              text: 'Donne-moi une raison de ne pas te virer avant même que tu ne sois assise.',
+            },
+            {
+              id: 'choices1',
+              role: 'assistant',
+              type: 'choices',
+              choices: INITIAL_CHOICES,
+            }
+          ]);
+          setApiHistory([
+            {
+              role: 'assistant',
+              content: "Tu es en retard. Donne-moi une raison de ne pas te virer avant même que tu ne sois assise.",
+            },
+          ]);
+        }, 5200);
+
+        return () => {
+          clearTimeout(t1);
+          clearTimeout(t2);
+          clearTimeout(t3);
+          clearTimeout(t4);
+        };
+      } else {
+        // Instant load on direct page load (e.g. reload when already unlocked)
+        setMessages([
+          {
+            id: 'n1',
+            role: 'assistant',
+            type: 'narrator',
+            text: "Tu arrives en retard à ton entretien d'embauche. La porte est entrouverte. Il est là.",
+          },
+          {
+            id: 'msg1',
+            role: 'assistant',
+            type: 'incoming',
+            text: 'Tu es en retard.',
+          },
+          {
+            id: 'msg2',
+            role: 'assistant',
+            type: 'incoming',
+            text: 'Donne-moi une raison de ne pas te virer avant même que tu ne sois assise.',
+          },
+          {
+            id: 'choices1',
+            role: 'assistant',
+            type: 'choices',
+            choices: INITIAL_CHOICES,
+          },
+        ]);
+        setApiHistory([
+          {
+            role: 'assistant',
+            content: "Tu es en retard. Donne-moi une raison de ne pas te virer avant même que tu ne sois assise.",
+          },
+        ]);
+      }
     } else {
       // Static preview behind blur
       setMessages([
