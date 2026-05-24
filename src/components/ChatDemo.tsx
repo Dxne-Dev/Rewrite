@@ -270,20 +270,48 @@ export default function ChatDemo({ isBetaUnlocked, onOpenForm }: ChatDemoProps) 
       // onChunk
       (chunk) => {
         fullText += chunk;
+        
+        // Only show dialogue text (before '///') in the bubble during streaming
+        let displayText = fullText;
+        if (fullText.includes('///')) {
+          displayText = fullText.split('///')[0].trim();
+        }
+
         setMessages((prev) =>
           prev.map((m) =>
-            m.id === streamId ? { ...m, text: fullText } : m
+            m.id === streamId ? { ...m, text: displayText } : m
           )
         );
       },
       // onDone
       () => {
         setHeaderStatus('En ligne');
+        
+        // Save the full raw text (with choices) to history so the model keeps context of options it proposed
         setApiHistory((prev) => [
           ...prev,
           { role: 'assistant', content: fullText },
         ]);
         setProgress((p) => Math.min(10, p + 1));
+
+        // Parse dynamic choices from the response using '///'
+        let choicesList: string[] = [];
+        if (fullText.includes('///')) {
+          choicesList = fullText
+            .split('///')
+            .slice(1)
+            .map((opt) => opt.trim().replace(/^[0-9]+[\.\-\)\s]+/, '').trim())
+            .filter(Boolean);
+        }
+
+        // Fallback options in case the AI didn't provide enough or any choices
+        if (choicesList.length < 2) {
+          choicesList = [
+            "Continuer l'histoire",
+            "Rester silencieux",
+            "Réagir",
+          ];
+        }
 
         // Add follow-up choices after a short pause
         setTimeout(() => {
@@ -293,11 +321,7 @@ export default function ChatDemo({ isBetaUnlocked, onOpenForm }: ChatDemoProps) 
               id: 'choices-' + Date.now(),
               role: 'assistant',
               type: 'choices',
-              choices: [
-                'Le regarder droit dans les yeux.',
-                'Baisser la tête, rester professionnelle.',
-                'Tenter de partir.',
-              ],
+              choices: choicesList,
             },
           ]);
         }, 800);
