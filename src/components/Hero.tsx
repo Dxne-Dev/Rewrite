@@ -1,7 +1,11 @@
 import { motion } from 'motion/react';
 import { ArrowRight } from 'lucide-react';
 
-export default function Hero() {
+type HeroProps = {
+  onOpenForm: () => void;
+};
+
+export default function Hero({ onOpenForm }: HeroProps) {
   return (
     <section className="relative px-6 pt-32 pb-24 md:pt-48 md:pb-32 flex flex-col items-center justify-center text-center overflow-hidden">
       {/* Background ambient glow */}
@@ -53,6 +57,8 @@ export default function Hero() {
           />
 
           <motion.button
+            type="button"
+            onClick={onOpenForm}
             whileHover={{ 
               scale: 1.05,
               boxShadow: "0 0 30px rgba(168, 85, 247, 0.8)"

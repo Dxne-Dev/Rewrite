@@ -1,7 +1,11 @@
 import { motion } from 'motion/react';
 import { Star } from 'lucide-react';
 
-export default function EarlyBird() {
+type EarlyBirdProps = {
+  onOpenForm: () => void;
+};
+
+export default function EarlyBird({ onOpenForm }: EarlyBirdProps) {
   return (
     <section className="py-24 px-6">
       <motion.div 
@@ -24,7 +28,11 @@ export default function EarlyBird() {
             Réservez votre accès en avant-première et obtenez des crédits de jeu bonus au lancement officiel de l'application.
           </p>
 
-          <button className="group relative w-full sm:w-auto overflow-hidden rounded-full p-[1px]">
+          <button
+            type="button"
+            onClick={onOpenForm}
+            className="group relative w-full sm:w-auto overflow-hidden rounded-full p-[1px]"
+          >
             <span className="absolute inset-0 bg-gradient-to-r from-yellow-600 via-purple-600 to-yellow-600 rounded-full opacity-70 group-hover:opacity-100 transition-opacity duration-300" />
             <div className="relative bg-neutral-950 px-8 py-4 rounded-full transition-all duration-300 group-hover:bg-neutral-950/80 flex items-center justify-center gap-2">
               <span className="text-white font-medium">Obtenir le Pack</span>
