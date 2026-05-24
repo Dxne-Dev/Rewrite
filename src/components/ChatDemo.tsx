@@ -1,93 +1,569 @@
-import { motion } from 'motion/react';
-import { MessageCircle, Battery, Wifi, Signal } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Send } from 'lucide-react';
 
-export default function ChatDemo() {
+interface Message {
+  id: string;
+  type: 'narrator' | 'incoming' | 'outgoing' | 'choices';
+  text?: string;
+  choices?: string[];
+}
+
+type ChatDemoProps = {
+  isBetaUnlocked: boolean;
+  onOpenForm: () => void;
+};
+
+export default function ChatDemo({ isBetaUnlocked, onOpenForm }: ChatDemoProps) {
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [isTyping, setIsTyping] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [inputValue, setInputValue] = useState('');
+  const [headerStatus, setHeaderStatus] = useState('En ligne');
+  const feedRef = useRef<HTMLDivElement>(null);
+
+  // Auto scroll to bottom of the feed
+  useEffect(() => {
+    if (feedRef.current) {
+      feedRef.current.scrollTop = feedRef.current.scrollHeight;
+    }
+  }, [messages, isTyping]);
+
+  // Run demo when unlocked
+  useEffect(() => {
+    let active = true;
+
+    async function runDemo() {
+      // Clear messages if needed
+      setMessages([]);
+      // 1. Wait 600ms
+      await new Promise((r) => setTimeout(r, 600));
+      if (!active) return;
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: 'n1',
+          type: 'narrator',
+          text: "Tu arrives en retard à ton entretien d'embauche. La porte est entrouverte.",
+        },
+      ]);
+
+      // 2. Wait 1000ms, then show typing
+      await new Promise((r) => setTimeout(r, 1000));
+      if (!active) return;
+      setIsTyping(true);
+      setHeaderStatus('Écrit...');
+
+      // 3. Wait 1400ms, then hide typing & add message
+      await new Promise((r) => setTimeout(r, 1400));
+      if (!active) return;
+      setIsTyping(false);
+      setHeaderStatus('En ligne');
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: 'msg1',
+          type: 'incoming',
+          text: 'Tu es en retard.',
+        },
+      ]);
+
+      // 4. Wait 900ms, then show typing
+      await new Promise((r) => setTimeout(r, 900));
+      if (!active) return;
+      setIsTyping(true);
+      setHeaderStatus('Écrit...');
+
+      // 5. Wait 1200ms, then hide typing & add message
+      await new Promise((r) => setTimeout(r, 1200));
+      if (!active) return;
+      setIsTyping(false);
+      setHeaderStatus('En ligne');
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: 'msg2',
+          type: 'incoming',
+          text: 'Donne-moi une raison de ne pas te virer avant même que tu ne sois assise.',
+        },
+      ]);
+
+      // 6. Wait 800ms
+      await new Promise((r) => setTimeout(r, 800));
+      if (!active) return;
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: 'n2',
+          type: 'narrator',
+          text: "Il lève les yeux de son téléphone. C'est lui — l'homme du métro ce matin.",
+        },
+      ]);
+
+      // 7. Wait 700ms, then show choices
+      await new Promise((r) => setTimeout(r, 700));
+      if (!active) return;
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: 'choices1',
+          type: 'choices',
+          choices: [
+            "Je m'excuse platement et je m'assieds.",
+            "Peut-être que je vaux le retard.",
+            "Je sors immédiatement sans un mot.",
+          ],
+        },
+      ]);
+    }
+
+    if (isBetaUnlocked) {
+      runDemo();
+    } else {
+      // Set some initial blurred background messages
+      setMessages([
+        {
+          id: 'n1',
+          type: 'narrator',
+          text: "Tu arrives en retard à ton entretien d'embauche. La porte est entrouverte.",
+        },
+        {
+          id: 'msg1',
+          type: 'incoming',
+          text: 'Tu es en retard.',
+        },
+        {
+          id: 'msg2',
+          type: 'incoming',
+          text: 'Donne-moi une raison de ne pas te virer avant même que tu ne sois assise.',
+        }
+      ]);
+    }
+
+    return () => {
+      active = false;
+    };
+  }, [isBetaUnlocked]);
+
+  // Handle choice selection
+  const handleChoice = async (choiceText: string) => {
+    // 1. Add player's selection to messages
+    const outgoingId = 'out-' + Date.now();
+    setMessages((prev) => [
+      // Filter out any existing active choice blocks
+      ...prev.filter((m) => m.type !== 'choices'),
+      {
+        id: outgoingId,
+        type: 'outgoing',
+        text: choiceText,
+      },
+    ]);
+
+    // 2. Update progress
+    setProgress(1);
+
+    // 3. Show typing indicator
+    setIsTyping(true);
+    setHeaderStatus('Écrit...');
+
+    // 4. Alexandre responses based on selection
+    await new Promise((r) => setTimeout(r, 1500));
+    setIsTyping(false);
+    setHeaderStatus('En ligne');
+
+    let replyText = '';
+    let followUpNarrator = '';
+
+    if (choiceText.includes('excuse')) {
+      replyText = 'Bien. Installe-toi. Ne me fais plus perdre mon temps.';
+      followUpNarrator = 'Vous vous asseyez, votre cœur battant la chamade. Ses yeux sombres ne vous lâchent pas d\'une semelle.';
+    } else if (choiceText.includes('vaux')) {
+      replyText = 'De l\'audace... Ou de l\'arrogance ? Nous allons voir si ton CV est à la hauteur de ton culot.';
+      followUpNarrator = 'Un demi-sourire presque imperceptible apparaît sur ses lèvres glaciales. Le jeu commence.';
+    } else {
+      replyText = 'Une fuite ? C\'est probablement la décision la plus intelligente que tu aies prise aujourd\'hui.';
+      followUpNarrator = 'Vous faites demi-tour. Mais avant que vous ne franchissiez le seuil, la porte se referme brusquement.';
+    }
+
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: 'reply-' + Date.now(),
+        type: 'incoming',
+        text: replyText,
+      },
+    ]);
+
+    // Follow up narrator message
+    await new Promise((r) => setTimeout(r, 800));
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: 'narrator-' + Date.now(),
+        type: 'narrator',
+        text: followUpNarrator,
+      },
+    ]);
+
+    // Show follow up choices
+    await new Promise((r) => setTimeout(r, 1000));
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: 'choices2-' + Date.now(),
+        type: 'choices',
+        choices: [
+          'Le regarder droit dans les yeux et relever le défi.',
+          'Garder la tête basse et rester strictement professionnelle.',
+        ],
+      },
+    ]);
+  };
+
+  // Handle follow up choice selections
+  const handleFollowUpChoice = async (choiceText: string) => {
+    setMessages((prev) => [
+      ...prev.filter((m) => m.type !== 'choices'),
+      {
+        id: 'out-f-' + Date.now(),
+        type: 'outgoing',
+        text: choiceText,
+      },
+    ]);
+
+    setProgress(2);
+    setIsTyping(true);
+    setHeaderStatus('Écrit...');
+
+    await new Promise((r) => setTimeout(r, 1800));
+    setIsTyping(false);
+    setHeaderStatus('En ligne');
+
+    let reply = '';
+    if (choiceText.includes('regarder') || choiceText.includes('défie')) {
+      reply = 'Ta détermination m\'amuse. Parlons de ton expérience... si tu arrives à garder ton sang-froid.';
+    } else {
+      reply = 'Sage décision. Commençons par analyser tes compétences techniques.';
+    }
+
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: 'reply-f-' + Date.now(),
+        type: 'incoming',
+        text: reply,
+      },
+    ]);
+
+    await new Promise((r) => setTimeout(r, 800));
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: 'n-end-' + Date.now(),
+        type: 'narrator',
+        text: 'La conversation se poursuit. Votre destin au sein de Moreau Enterprises commence à se dessiner...',
+      },
+    ]);
+  };
+
+  // Handle custom typing submit
+  const handleSendMessage = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!inputValue.trim()) return;
+
+    const text = inputValue;
+    setInputValue('');
+
+    // Remove active choices
+    setMessages((prev) => [
+      ...prev.filter((m) => m.type !== 'choices'),
+      {
+        id: 'custom-' + Date.now(),
+        type: 'outgoing',
+        text: text,
+      },
+    ]);
+
+    setProgress((p) => Math.min(10, p + 1));
+    setIsTyping(true);
+    setHeaderStatus('Écrit...');
+
+    await new Promise((r) => setTimeout(r, 1600));
+    setIsTyping(false);
+    setHeaderStatus('En ligne');
+
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: 'custom-reply-' + Date.now(),
+        type: 'incoming',
+        text: 'Intéressant. Tu ne manques pas de répartie. Voyons comment tu te débrouilles sous pression.',
+      },
+    ]);
+  };
+
   return (
-    <section className="py-24 px-6 relative flex flex-col items-center">
-      <motion.div 
-        initial={{ opacity: 0, y: 40 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true, margin: "-100px" }}
-        transition={{ duration: 0.8 }}
-        className="w-full max-w-sm relative"
-      >
-        {/* Phone Frame */}
-        <div className="bg-neutral-950 border border-neutral-800 rounded-[3rem] p-2 shadow-2xl relative z-10">
-          <div className="bg-neutral-900/80 backdrop-blur-md border border-neutral-800/50 rounded-[2.5rem] overflow-hidden h-[600px] flex flex-col relative">
+    <section className="py-16 px-4 md:px-6 relative flex flex-col items-center bg-black/60">
+      <div className="w-full max-w-5xl h-[650px] rounded-2xl border border-app-border overflow-hidden flex bg-app-bg text-[15px] shadow-2xl relative z-10">
+        
+        {/* Blur Unlock Overlay */}
+        <div 
+          className={`absolute inset-0 bg-neutral-950/40 backdrop-blur-xl z-30 flex flex-col items-center justify-center p-6 text-center transition-all duration-1000 ease-in-out ${
+            isBetaUnlocked ? 'opacity-0 pointer-events-none scale-95 blur-md' : 'opacity-100 scale-100'
+          }`}
+        >
+          <div className="max-w-md bg-neutral-950/80 border border-purple-500/20 rounded-3xl p-8 shadow-[0_0_50px_rgba(168,85,247,0.15)] flex flex-col items-center gap-6 relative overflow-hidden backdrop-blur-md">
+            {/* Glow backgrounds inside the overlay card */}
+            <div className="absolute -top-24 -left-24 w-48 h-48 bg-purple-500/20 rounded-full blur-[60px] pointer-events-none" />
+            <div className="absolute -bottom-24 -right-24 w-48 h-48 bg-blue-500/20 rounded-full blur-[60px] pointer-events-none" />
             
-            {/* Status Bar */}
-            <div className="h-12 w-full flex items-center justify-between px-6 pt-2 text-neutral-400">
-              <span className="text-xs font-semibold tracking-wider">03:14</span>
-              <div className="flex items-center space-x-2">
-                <Signal className="w-4 h-4" />
-                <Wifi className="w-4 h-4" />
-                <Battery className="w-5 h-5" />
-              </div>
+            {/* Lock icon with violet pulse */}
+            <div className="w-16 h-16 rounded-full bg-neutral-900 border border-purple-500/30 flex items-center justify-center relative shadow-[0_0_20px_rgba(168,85,247,0.2)] shrink-0">
+              <div className="absolute inset-0 rounded-full bg-purple-500/20 animate-ping opacity-60" />
+              <svg className="w-6 h-6 text-purple-400 relative z-10" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+              </svg>
             </div>
 
-            {/* Chat Header */}
-            <div className="flex flex-col items-center pb-4 border-b border-neutral-800/50">
-              <div className="w-16 h-16 rounded-full bg-neutral-800 border border-purple-500/30 overflow-hidden mb-2 relative">
-                <img 
-                  src="https://images.unsplash.com/photo-1542080681-b52d382432af?q=80&w=200&h=200&auto=format&fit=crop" 
-                  alt="Mysterious character" 
-                  className="w-full h-full object-cover opacity-80"
-                />
-              </div>
-              <h3 className="font-serif text-lg text-white font-medium">Ashton</h3>
-              <p className="text-xs text-purple-400">En ligne</p>
+            {/* Content */}
+            <div className="flex flex-col gap-2 relative z-10">
+              <h3 className="text-xl md:text-2xl font-serif font-medium text-white tracking-wide">
+                Prêt à réécrire l'histoire ?
+              </h3>
+              <p className="text-neutral-400 text-sm leading-relaxed">
+                Découvrez l'expérience interactive en direct. Rejoignez notre bêta fermée gratuite pour déverrouiller le simulateur de dialogue.
+              </p>
             </div>
 
-            {/* Chat Area */}
-            <div className="flex-1 p-5 flex flex-col justify-end space-y-6">
-              
-              {/* NPC Message */}
-              <motion.div 
-                initial={{ opacity: 0, x: -20 }}
-                whileInView={{ opacity: 1, x: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: 0.2, duration: 0.5 }}
-                className="flex flex-col items-start"
-              >
-                <div className="bg-neutral-800 text-neutral-200 rounded-2xl rounded-tl-sm px-4 py-3 max-w-[85%] text-sm leading-relaxed border border-neutral-700/50">
-                  Je ne peux pas être avec toi, c'est trop dangereux.
-                </div>
-                <span className="text-[10px] text-neutral-500 mt-2 ml-1">Livre originel</span>
-              </motion.div>
-
-              {/* Player Option Message */}
-              <motion.div 
-                initial={{ opacity: 0, x: 20 }}
-                whileInView={{ opacity: 1, x: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: 1.2, duration: 0.5 }}
-                className="flex flex-col items-end"
-              >
-                <div className="bg-purple-600 text-white rounded-2xl rounded-tr-sm px-4 py-3 max-w-[85%] text-sm leading-relaxed relative shadow-[0_0_20px_rgba(147,51,234,0.3)]">
-                  Ferme-la et embrasse-moi.
-                </div>
-                <div className="flex items-center gap-1.5 mt-2 mr-1">
-                  <MessageCircle className="w-3 h-3 text-purple-400" />
-                  <span className="text-[10px] uppercase tracking-wider text-purple-400 font-medium">
-                    Option Joueur (Déviation de l'histoire)
-                  </span>
-                </div>
-              </motion.div>
-
-            </div>
-
-            {/* Input Bar */}
-            <div className="h-16 border-t border-neutral-800/50 flex items-center px-4 bg-neutral-900/50">
-              <div className="flex-1 bg-neutral-950 border border-neutral-800 rounded-full h-10 px-4 flex items-center text-neutral-500 text-sm">
-                Écrire un message...
-              </div>
-            </div>
+            {/* CTA Button */}
+            <button
+              type="button"
+              onClick={onOpenForm}
+              className="group relative inline-flex items-center justify-center gap-2 bg-gradient-to-r from-purple-600 to-purple-800 hover:from-purple-500 hover:to-purple-700 text-white font-medium py-3.5 px-8 rounded-full transition-all duration-300 shadow-[0_0_30px_rgba(168,85,247,0.4)] hover:shadow-[0_0_40px_rgba(168,85,247,0.6)] cursor-pointer overflow-hidden relative z-10 shrink-0"
+            >
+              <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_ease-in-out_infinite]" />
+              <span className="relative z-10">Tester la démo</span>
+              <svg className="w-4 h-4 relative z-10 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                <path d="M5 12h14M12 5l7 7-7 7"></path>
+              </svg>
+            </button>
           </div>
         </div>
 
-        {/* Ambient background glow for phone */}
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full max-w-[300px] max-h-[500px] bg-purple-600/10 rounded-[3rem] blur-[80px] -z-10" />
-      </motion.div>
+        {/* Sidebar */}
+        <aside className="hidden sm:flex w-[280px] min-w-[280px] bg-app-sidebar border-r border-app-border flex-col overflow-hidden">
+          {/* Book Header */}
+          <div className="px-5 pt-5 pb-4 border-b border-app-border shrink-0">
+            <div className="text-[11px] font-medium tracking-[1.5px] uppercase text-app-text-dim mb-3.5">
+              En lecture
+            </div>
+            <div className="w-full aspect-[2/3] rounded-lg overflow-hidden relative bg-gradient-to-br from-[#1a0a0a] via-[#2d1515] to-[#1a0a0a] shadow-[0_8px_32px_rgba(0,0,0,0.6),inset_0_1px_0_rgba(255,255,255,0.05)] book-cover-texture flex flex-col items-center justify-center p-6">
+              <div className="absolute top-2.5 right-2.5 bg-app-gold text-black text-[8px] font-bold tracking-[1px] uppercase py-[3px] px-[7px] rounded-[3px] z-20">
+                BETA
+              </div>
+              <img
+                alt="Le PDG Book Cover"
+                className="absolute inset-0 w-full h-full object-cover z-10"
+                src="https://lh3.googleusercontent.com/aida-public/AB6AXuAZrYb8t1PZEqfrLSg8VQ-Whx7GlY634Uro6kZer_L4fBHFrY02KfLcmUF8lV5-ABtRcf0ZOfpm4EigugB1mz02yPB88hrELK9NUp_bFt3BPuj0N0BpSgrUkySAqqcuCaOrr29UszVz25J2eogvs6mbXrUXsgnnxFNMTFvUAJcGH1IpwqwPMWDIRl86iL8D6jmAFd3Iumg1Uiazd4lLqm246fAQca4gUlgPtL7XgxtvYufpLiWgWmJIaQjmX5xRAAD-eOzrLv1591E"
+              />
+            </div>
+          </div>
+
+          {/* Synopsis */}
+          <div className="flex-1 overflow-y-auto px-5 py-4 no-scrollbar">
+            <div className="text-[10px] font-semibold tracking-[1.5px] uppercase text-app-text-dim mb-2.5">
+              Synopsis
+            </div>
+            <div className="text-[13px] leading-[1.65] text-app-text-sec italic">
+              Un entretien. Dix minutes de retard. Et cet homme... Alexandre Moreau. Le même regard glacial et magnétique qui m'avait foudroyée dans le métro ce matin. Il est puissant, dangereux, et il tient mon avenir entre ses mains. Entre désir interdit et jeux de pouvoir, chaque mot peut me sauver ou me perdre. Succomberez-vous au PDG ?
+            </div>
+            <div className="flex flex-wrap gap-1.5 mt-3.5">
+              <span className="bg-[rgba(10,132,255,0.15)] text-app-blue text-[10px] font-medium py-[3px] px-2.5 rounded-full border border-[rgba(10,132,255,0.2)]">
+                Romance
+              </span>
+              <span className="bg-[rgba(10,132,255,0.15)] text-app-blue text-[10px] font-medium py-[3px] px-2.5 rounded-full border border-[rgba(10,132,255,0.2)]">
+                Thriller
+              </span>
+              <span className="bg-[rgba(10,132,255,0.15)] text-app-blue text-[10px] font-medium py-[3px] px-2.5 rounded-full border border-[rgba(10,132,255,0.2)]">
+                Interactif
+              </span>
+            </div>
+          </div>
+
+          {/* Progress */}
+          <div className="px-5 py-3.5 border-t border-app-border shrink-0">
+            <div className="flex justify-between text-[10px] text-app-text-dim tracking-[0.5px] mb-2">
+              <span>Progression</span>
+              <span id="depthLabel">{progress} / 10</span>
+            </div>
+            <div className="w-full h-[3px] bg-app-border rounded-sm overflow-hidden">
+              <div
+                className="h-full bg-gradient-to-r from-app-blue to-[#30d158] rounded-sm transition-all duration-500"
+                style={{ width: `${progress * 10}%` }}
+              ></div>
+            </div>
+          </div>
+        </aside>
+
+        {/* Chat Panel */}
+        <main className="flex-1 flex flex-col min-w-0 bg-app-bg relative">
+          {/* Chat Header */}
+          <header className="flex items-center justify-between px-5 h-14 bg-[rgba(28,28,30,0.85)] backdrop-blur-[20px] border-b border-app-border shrink-0 relative z-20">
+            <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[rgba(10,132,255,0.3)] to-transparent"></div>
+            <div className="flex items-center gap-3">
+              <div className="w-[34px] h-[34px] rounded-full bg-gradient-to-br from-[#1a0a0a] to-[#4a1a1a] flex items-center justify-center text-base border border-white/10 shrink-0">
+                🥀
+              </div>
+              <div className="flex flex-col gap-[1px]">
+                <h1 className="text-[15px] font-semibold text-app-text tracking-[0.2px] leading-tight">
+                  Alexandre Moreau
+                </h1>
+                <span className="text-[11px] text-app-text-dim leading-tight">
+                  {headerStatus}
+                </span>
+              </div>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <div className="text-[13px] font-bold tracking-[3px] uppercase text-app-text-dim">
+                RE<span className="text-app-blue">WRITE</span>
+              </div>
+              <div className="text-[9px] font-semibold tracking-[1px] text-app-gold bg-[rgba(255,214,10,0.1)] border border-[rgba(255,214,10,0.2)] py-[2px] px-1.5 rounded ml-1">
+                BETA
+              </div>
+            </div>
+          </header>
+
+          {/* Message Feed */}
+          <div
+            ref={feedRef}
+            className="flex-1 overflow-y-auto px-4 pt-5 pb-3 flex flex-col gap-1.5 no-scrollbar scroll-smooth"
+          >
+            <div className="text-center text-[11px] text-app-text-dim my-3 font-medium">
+              Aujourd'hui
+            </div>
+
+            {messages.map((msg) => {
+              if (msg.type === 'narrator') {
+                return (
+                  <div
+                    key={msg.id}
+                    className="self-center max-w-[75%] bg-[rgba(58,58,60,0.5)] border border-app-border rounded-xl px-3.5 py-2.5 text-[13px] italic text-app-text-sec leading-relaxed text-center my-1.5 animate-bubble-in"
+                  >
+                    {msg.text}
+                  </div>
+                );
+              }
+
+              if (msg.type === 'incoming') {
+                return (
+                  <div
+                    key={msg.id}
+                    className="flex flex-col gap-[1px] items-start animate-bubble-in"
+                  >
+                    <div className="bubble incoming max-w-[70%] py-2.5 px-3.5 rounded-[18px] text-[15px] leading-[1.45] text-app-text">
+                      {msg.text}
+                    </div>
+                  </div>
+                );
+              }
+
+              if (msg.type === 'outgoing') {
+                return (
+                  <div
+                    key={msg.id}
+                    className="flex flex-col gap-[1px] items-end animate-bubble-in"
+                  >
+                    <div className="bubble outgoing max-w-[70%] py-2.5 px-3.5 rounded-[18px] text-[15px] leading-[1.45] text-app-text">
+                      {msg.text}
+                    </div>
+                  </div>
+                );
+              }
+
+              if (msg.type === 'choices' && msg.choices) {
+                return (
+                  <div
+                    key={msg.id}
+                    className="self-start max-w-[82%] my-2 flex flex-col gap-[7px] animate-bubble-in"
+                  >
+                    <div className="text-[11px] text-app-text-dim px-1 font-medium">
+                      Choisissez une réponse rapide ou écrivez librement ↓
+                    </div>
+                    {msg.choices.map((choice, i) => (
+                      <button
+                        key={i}
+                        onClick={() => {
+                          if (msg.id.startsWith('choices2')) {
+                            handleFollowUpChoice(choice);
+                          } else {
+                            handleChoice(choice);
+                          }
+                        }}
+                        className="bg-app-sidebar border border-app-border rounded-[18px] py-[9px] px-4 text-[14px] text-app-blue cursor-pointer transition-all duration-150 text-left w-fit max-w-full flex items-center gap-2 hover:bg-[rgba(10,132,255,0.12)] hover:border-[rgba(10,132,255,0.4)] hover:scale-[1.02] active:scale-[0.98]"
+                      >
+                        <span className="text-[11px] font-bold text-app-text-dim min-w-[16px]">
+                          0{i + 1}
+                        </span>
+                        <span>{choice}</span>
+                      </button>
+                    ))}
+                  </div>
+                );
+              }
+
+              return null;
+            })}
+
+            {/* Typing Indicator */}
+            {isTyping && (
+              <div className="flex items-center gap-2.5 py-1 animate-bubble-in">
+                <div className="w-7 h-7 rounded-full bg-[#1a0a0a] flex items-center justify-center text-[13px] shrink-0 border border-white/10">
+                  🥀
+                </div>
+                <div className="bg-app-border rounded-[18px] rounded-bl-[4px] py-2.5 px-4 flex gap-1 items-center bubble incoming">
+                  <div className="typing-dot"></div>
+                  <div className="typing-dot"></div>
+                  <div className="typing-dot"></div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Input Bar */}
+          <form
+            onSubmit={handleSendMessage}
+            className="flex items-end gap-2.5 px-4 py-3 bg-[rgba(28,28,30,0.85)] backdrop-blur-[20px] border-t border-app-border shrink-0"
+          >
+            <div className="flex-1 flex items-end bg-[#2c2c2e] rounded-[20px] border border-app-border px-3.5 py-2 gap-2 transition-colors duration-200 focus-within:border-[rgba(10,132,255,0.4)]">
+              <textarea
+                className="flex-1 bg-transparent border-none outline-none text-app-text text-[15px] resize-none min-h-[22px] max-h-[120px] leading-[1.4] no-scrollbar p-0 placeholder:text-app-text-dim focus:ring-0"
+                id="msgInput"
+                placeholder="Réponds…"
+                rows={1}
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSendMessage(e);
+                  }
+                }}
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={!inputValue.trim() || isTyping}
+              className="w-8 h-8 rounded-full bg-app-blue border-none flex items-center justify-center cursor-pointer shrink-0 transition-all duration-150 hover:bg-[#0071e3] hover:scale-105 active:scale-95 disabled:bg-app-sidebar disabled:text-app-text-dim disabled:cursor-default disabled:hover:scale-100"
+              id="sendBtn"
+            >
+              <Send className="w-[15px] h-[15px] text-white" />
+            </button>
+          </form>
+        </main>
+      </div>
+
+      {/* Decorative ambient background glow behind desktop applet */}
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full max-w-[800px] max-h-[400px] bg-purple-600/5 rounded-full blur-[100px] pointer-events-none -z-10" />
     </section>
   );
 }
