@@ -449,7 +449,7 @@ export default function ChatDemo({ isBetaUnlocked, onOpenForm }: ChatDemoProps) 
               Synopsis
             </div>
             <div className="text-[13px] leading-[1.65] text-app-text-sec italic">
-              Un entretien. Dix minutes de retard. Et cet homme... Alexandre Moreau. Le même regard glacial et magnétique qui m'avait foudroyée dans le métro ce matin. Il est puissant, dangereux, et il tient mon avenir entre ses mains. Entre désir interdit et jeux de pouvoir, chaque mot peut me sauver ou me perdre. Succomberez-vous au PDG ?
+              Adrian Vance s'est octroyé le droit de régenter votre vie. Hier soir, vous avez bravé son autorité pour un simple rendez-vous galant. La sanction a été immédiate : rapatriée de force. Maintenant, seule face à lui dans sa bibliothèque, chaque mot peut vous sauver ou vous perdre. Succomberez-vous à son emprise ?
             </div>
             <div className="flex flex-wrap gap-1.5 mt-3.5">
               <span className="bg-[rgba(10,132,255,0.15)] text-app-blue text-[10px] font-medium py-[3px] px-2.5 rounded-full border border-[rgba(10,132,255,0.2)]">
