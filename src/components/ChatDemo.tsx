@@ -499,7 +499,7 @@ export default function ChatDemo({ isBetaUnlocked, onOpenForm }: ChatDemoProps) 
                       <span className="w-1 h-1 rounded-full bg-purple-400 animate-bounce [animation-delay:300ms]" />
                     </span>
                   )}
-                  {headerStatus}
+                  <span>{headerStatus}</span>
                 </span>
               </div>
             </div>
@@ -529,7 +529,7 @@ export default function ChatDemo({ isBetaUnlocked, onOpenForm }: ChatDemoProps) 
                     key={msg.id}
                     className="self-center max-w-[75%] bg-[rgba(58,58,60,0.5)] border border-app-border rounded-xl px-3.5 py-2.5 text-[13px] italic text-app-text-sec leading-relaxed text-center my-1.5 animate-bubble-in"
                   >
-                    {msg.text}
+                    <span>{msg.text}</span>
                   </div>
                 );
               }
@@ -538,7 +538,7 @@ export default function ChatDemo({ isBetaUnlocked, onOpenForm }: ChatDemoProps) 
                 return (
                   <div key={msg.id} className="flex flex-col gap-[1px] items-start animate-bubble-in">
                     <div className="bubble incoming max-w-[70%] py-2.5 px-3.5 rounded-[18px] text-[15px] leading-[1.45] text-app-text">
-                      {msg.text || (
+                      {msg.text ? <span>{msg.text}</span> : (
                         <span className="flex gap-1 items-center">
                           <span className="typing-dot" />
                           <span className="typing-dot" />
@@ -554,7 +554,7 @@ export default function ChatDemo({ isBetaUnlocked, onOpenForm }: ChatDemoProps) 
                 return (
                   <div key={msg.id} className="flex flex-col gap-[1px] items-end animate-bubble-in">
                     <div className="bubble outgoing max-w-[70%] py-2.5 px-3.5 rounded-[18px] text-[15px] leading-[1.45] text-app-text">
-                      {msg.text}
+                      <span>{msg.text}</span>
                     </div>
                   </div>
                 );
