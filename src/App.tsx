@@ -8,16 +8,13 @@ import Footer from './components/Footer';
 
 export default function App() {
   const [isFormOpen, setIsFormOpen] = useState(false);
-  const [isBetaUnlocked, setIsBetaUnlocked] = useState(false);
-  const demoSectionRef = useRef<HTMLDivElement>(null);
-
-  // Initialize beta unlock status from localStorage
-  useEffect(() => {
-    const unlocked = localStorage.getItem('rewrite_beta_unlocked') === 'true';
-    if (unlocked) {
-      setIsBetaUnlocked(true);
+  const [isBetaUnlocked, setIsBetaUnlocked] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('rewrite_beta_unlocked') === 'true';
     }
-  }, []);
+    return false;
+  });
+  const demoSectionRef = useRef<HTMLDivElement>(null);
 
   const handleFormSuccess = () => {
     setIsFormOpen(false);

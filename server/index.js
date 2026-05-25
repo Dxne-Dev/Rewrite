@@ -132,7 +132,12 @@ app.post('/api/chat', async (req, res) => {
   }
 });
 
-const PORT = 5174;
-app.listen(PORT, () => {
-  console.log(`🚀 REWRITE API server running on http://localhost:${PORT}`);
-});
+export default app;
+
+if (!process.env.VERCEL) {
+  const PORT = 5174;
+  app.listen(PORT, () => {
+    console.log(`🚀 REWRITE API server running on http://localhost:${PORT}`);
+  });
+}
+
