@@ -110,6 +110,7 @@ export default function ChatDemo({ isBetaUnlocked, onOpenForm }: ChatDemoProps) 
   const [apiHistory, setApiHistory] = useState<{ role: 'user' | 'assistant'; content: string }[]>([]);
   const [isTyping, setIsTyping] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [isDemoEnded, setIsDemoEnded] = useState(false);
   const [inputValue, setInputValue] = useState('');
   const [headerStatus, setHeaderStatus] = useState('En ligne');
   const [streamingText, setStreamingText] = useState('');
@@ -260,9 +261,10 @@ export default function ChatDemo({ isBetaUnlocked, onOpenForm }: ChatDemoProps) 
   }, [isBetaUnlocked]);
 
   const sendMessage = async (userText: string) => {
-    if (isTyping) return;
+    if (isTyping || isDemoEnded) return;
 
     const outId = 'out-' + Date.now();
+    const currentProgress = progress + 1;
 
     // Add user message, remove choices
     setMessages((prev) => [
@@ -275,21 +277,25 @@ export default function ChatDemo({ isBetaUnlocked, onOpenForm }: ChatDemoProps) 
       { role: 'user', content: userText },
     ];
     setApiHistory(newHistory);
-    setProgress((p) => Math.min(10, p + 1));
+    setProgress(currentProgress);
+
+    if (currentProgress >= 10) {
+      setIsDemoEnded(true);
+      setHeaderStatus('Démo terminée');
+      return;
+    }
 
     // Show typing
     setIsTyping(true);
     setHeaderStatus('Écrit...');
 
-    // Small delay before streaming starts (feels more natural)
+    // Small delay before streaming starts
     await new Promise((r) => setTimeout(r, 600));
 
-    // Create streaming message placeholder
-    const streamId = 'stream-' + Date.now();
-    setMessages((prev) => [
-      ...prev,
-      { id: streamId, role: 'assistant', type: 'incoming', text: '' },
-    ]);
+    // We will use two separate IDs for narration and dialogue to stream into them
+    const narrationId = 'narr-' + Date.now();
+    const dialogueId = 'diag-' + Date.now();
+    
     setIsTyping(false);
 
     let fullText = '';
@@ -300,28 +306,53 @@ export default function ChatDemo({ isBetaUnlocked, onOpenForm }: ChatDemoProps) 
       (chunk) => {
         fullText += chunk;
         
-        // Only show dialogue text (before '///') in the bubble during streaming
-        let displayText = fullText;
-        if (fullText.includes('///')) {
-          displayText = fullText.split('///')[0].trim();
+        // Parse the tags
+        const narrationMatch = fullText.match(/\[NARRATION\]([\s\S]*?)(?=\[DIALOGUE\]|(\/\/\/)|$)/i);
+        const dialogueMatch = fullText.match(/\[DIALOGUE\]([\s\S]*?)(?=(\/\/\/)|$)/i);
+
+        let narrationText = narrationMatch ? narrationMatch[1].trim() : '';
+        let dialogueText = dialogueMatch ? dialogueMatch[1].trim() : '';
+
+        // Fallback: if no tags are detected yet but there is text, 
+        // and we haven't reached the dialogue part yet, show it as dialogue
+        if (!narrationText && !dialogueText && fullText.trim()) {
+          dialogueText = fullText.split('///')[0].trim();
         }
 
-        setMessages((prev) =>
-          prev.map((m) =>
-            m.id === streamId ? { ...m, text: displayText } : m
-          )
-        );
+        setMessages((prev) => {
+          let newMessages = [...prev];
+          
+          // Handle Narration
+          if (narrationText) {
+            const existingNarrIdx = newMessages.findIndex(m => m.id === narrationId);
+            if (existingNarrIdx === -1) {
+              newMessages.push({ id: narrationId, role: 'assistant', type: 'narrator', text: narrationText });
+            } else {
+              newMessages[existingNarrIdx] = { ...newMessages[existingNarrIdx], text: narrationText };
+            }
+          }
+
+          // Handle Dialogue
+          if (dialogueText) {
+            const existingDiagIdx = newMessages.findIndex(m => m.id === dialogueId);
+            if (existingDiagIdx === -1) {
+              newMessages.push({ id: dialogueId, role: 'assistant', type: 'incoming', text: dialogueText });
+            } else {
+              newMessages[existingDiagIdx] = { ...newMessages[existingDiagIdx], text: dialogueText };
+            }
+          }
+
+          return newMessages;
+        });
       },
       // onDone
       () => {
         setHeaderStatus('En ligne');
         
-        // Save the full raw text (with choices) to history so the model keeps context of options it proposed
         setApiHistory((prev) => [
           ...prev,
           { role: 'assistant', content: fullText },
         ]);
-        setProgress((p) => Math.min(10, p + 1));
 
         // Parse dynamic choices from the response using '///'
         let choicesList: string[] = [];
@@ -333,12 +364,12 @@ export default function ChatDemo({ isBetaUnlocked, onOpenForm }: ChatDemoProps) 
             .filter(Boolean);
         }
 
-        // Fallback options in case the AI didn't provide enough or any choices
+        // Fallback options
         if (choicesList.length < 2) {
           choicesList = [
-            "Continuer l'histoire",
-            "Rester silencieux",
-            "Réagir",
+            "Je reste silencieuse.",
+            "Je détourne le regard.",
+            "Je réponds avec défi.",
           ];
         }
 
@@ -358,13 +389,10 @@ export default function ChatDemo({ isBetaUnlocked, onOpenForm }: ChatDemoProps) 
       // onError
       (err) => {
         setHeaderStatus('En ligne');
-        setMessages((prev) =>
-          prev.map((m) =>
-            m.id === streamId
-              ? { ...m, text: `[Erreur: ${err}]` }
-              : m
-          )
-        );
+        setMessages((prev) => [
+          ...prev,
+          { id: 'err-' + Date.now(), role: 'assistant', type: 'incoming', text: `[Erreur: ${err}]` }
+        ]);
       }
     );
   };
@@ -600,37 +628,64 @@ export default function ChatDemo({ isBetaUnlocked, onOpenForm }: ChatDemoProps) 
             )}
           </div>
 
-          {/* Input Bar */}
-          <form
-            onSubmit={handleSendMessage}
-            className="flex items-end gap-2.5 px-4 py-3 bg-[rgba(28,28,30,0.85)] backdrop-blur-[20px] border-t border-app-border shrink-0"
-          >
-            <div className="flex-1 flex items-end bg-[#2c2c2e] rounded-[20px] border border-app-border px-3.5 py-2 gap-2 transition-colors duration-200 focus-within:border-[rgba(10,132,255,0.4)]">
-              <textarea
-                className="flex-1 bg-transparent border-none outline-none text-app-text text-[15px] resize-none min-h-[22px] max-h-[120px] leading-[1.4] no-scrollbar p-0 placeholder:text-app-text-dim focus:ring-0"
-                id="msgInput"
-                placeholder={isTyping ? 'Adrian répond...' : 'Réponds…'}
-                rows={1}
-                value={inputValue}
-                disabled={isTyping}
-                onChange={(e) => setInputValue(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    handleSendMessage(e);
-                  }
-                }}
-              />
+          {/* Input Bar or CTA */}
+           {isDemoEnded ? (
+             <div className="px-6 py-8 bg-[rgba(28,28,30,0.9)] backdrop-blur-[20px] border-t border-app-border shrink-0 animate-bubble-in">
+              <div className="max-w-md mx-auto flex flex-col items-center text-center gap-5">
+                <div className="w-12 h-12 rounded-full bg-app-blue/10 border border-app-blue/30 flex items-center justify-center text-xl shadow-[0_0_20px_rgba(10,132,255,0.2)]">
+                  ✨
+                </div>
+                <div className="space-y-2">
+                  <h4 className="text-lg font-semibold text-white tracking-wide">Merci d'avoir testé cette Bêta !</h4>
+                  <p className="text-app-text-dim text-[13px] leading-relaxed">
+                    L'aventure ne fait que commencer. La version finale avec des centaines de scénarios et une IA encore plus immersive sort très bientôt.
+                  </p>
+                </div>
+                <div className="flex flex-col w-full gap-3">
+                  <button
+                    onClick={onOpenForm}
+                    className="w-full bg-app-blue hover:bg-app-blue/90 text-white font-medium py-3 px-6 rounded-xl transition-all duration-300 shadow-[0_4px_15px_rgba(10,132,255,0.3)] hover:shadow-[0_6px_20px_rgba(10,132,255,0.4)] hover:scale-[1.02] active:scale-[0.98]"
+                  >
+                    Rejoindre la liste d'attente
+                  </button>
+                  <p className="text-[11px] text-app-text-dim italic">
+                    Remplissez le formulaire pour être recontacté en priorité.
+                  </p>
+                </div>
+              </div>
             </div>
-            <button
-              type="submit"
-              disabled={!inputValue.trim() || isTyping}
-              className="w-8 h-8 rounded-full bg-app-blue border-none flex items-center justify-center cursor-pointer shrink-0 transition-all duration-150 hover:bg-[#0071e3] hover:scale-105 active:scale-95 disabled:bg-app-sidebar disabled:text-app-text-dim disabled:cursor-default disabled:hover:scale-100"
-              id="sendBtn"
+          ) : (
+            <form
+              onSubmit={handleSendMessage}
+              className="flex items-end gap-2.5 px-4 py-3 bg-[rgba(28,28,30,0.85)] backdrop-blur-[20px] border-t border-app-border shrink-0"
             >
-              <Send className="w-[15px] h-[15px] text-white" />
-            </button>
-          </form>
+              <div className="flex-1 flex items-end bg-[#2c2c2e] rounded-[20px] border border-app-border px-3.5 py-2 gap-2 transition-colors duration-200 focus-within:border-[rgba(10,132,255,0.4)]">
+                <textarea
+                  className="flex-1 bg-transparent border-none outline-none text-app-text text-[15px] resize-none min-h-[22px] max-h-[120px] leading-[1.4] no-scrollbar p-0 placeholder:text-app-text-dim focus:ring-0"
+                  id="msgInput"
+                  placeholder={isTyping ? 'Adrian répond...' : 'Réponds…'}
+                  rows={1}
+                  value={inputValue}
+                  disabled={isTyping}
+                  onChange={(e) => setInputValue(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      handleSendMessage(e);
+                    }
+                  }}
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={!inputValue.trim() || isTyping}
+                className="w-8 h-8 rounded-full bg-app-blue border-none flex items-center justify-center cursor-pointer shrink-0 transition-all duration-150 hover:bg-[#0071e3] hover:scale-105 active:scale-95 disabled:bg-app-sidebar disabled:text-app-text-dim disabled:cursor-default disabled:hover:scale-100"
+                id="sendBtn"
+              >
+                <Send className="w-[15px] h-[15px] text-white" />
+              </button>
+            </form>
+          )}
         </main>
       </div>
 
