@@ -16,9 +16,9 @@ type ChatDemoProps = {
 
 // Initial choices shown to the user at the start
 const INITIAL_CHOICES = [
-  "Je m'excuse platement et je m'assieds.",
-  "Peut-être que je vaux le retard.",
-  "Je sors immédiatement sans un mot.",
+  "Je relève le menton, soutenant son regard sans reculer.",
+  "Je baisse les yeux, murmurant des excuses étouffées.",
+  "Je fais un pas en arrière : « Il ne me touchait pas ! »",
 ];
 
 async function streamGroqResponse(
@@ -135,11 +135,11 @@ export default function ChatDemo({ isBetaUnlocked, onOpenForm }: ChatDemoProps) 
             id: 'n1',
             role: 'assistant',
             type: 'narrator',
-            text: "Tu arrives en retard à ton entretien d'embauche. La porte est entrouverte. Il est là.",
+            text: "La bibliothèque privée d'Adrian. L'odeur d'ambre et de bois brûlé est étouffante. Le silence dure depuis dix minutes. Adrian vous fixe sans un mot.",
           }
         ]);
 
-        // 1. After 1s, show Alexander starts typing
+        // 1. After 1s, show Adrian starts typing
         const t1 = setTimeout(() => {
           setIsTyping(true);
           setHeaderStatus('Écrit...');
@@ -155,12 +155,12 @@ export default function ChatDemo({ isBetaUnlocked, onOpenForm }: ChatDemoProps) 
               id: 'msg1',
               role: 'assistant',
               type: 'incoming',
-              text: 'Il est assis derrière son immense bureau en acajou. Ses yeux sombres se lèvent lentement sur toi, t\'analysant de haut en bas sans un mot. Le silence de la pièce est lourd. "Tu es en retard," dit-il d\'une voix basse et tranchante.',
+              text: "Adrian est assis, sa chemise blanche entrouverte, les manches retroussées. Sur ses genoux repose votre téléphone portable à l'écran brisé.",
             }
           ]);
         }, 2600);
 
-        // 3. After 3.6s, Alexander starts typing again
+        // 3. After 3.6s, Adrian starts typing again
         const t3 = setTimeout(() => {
           setIsTyping(true);
           setHeaderStatus('Écrit...');
@@ -176,7 +176,7 @@ export default function ChatDemo({ isBetaUnlocked, onOpenForm }: ChatDemoProps) 
               id: 'msg2',
               role: 'assistant',
               type: 'incoming',
-              text: 'Il croise ses bras, adossé contre son fauteuil en cuir noir. Dehors, l\'alarme incendie retentit soudainement, mais il ne cille pas, maintenant un contact visuel magnétique. "Donne-moi une seule raison de ne pas te renvoyer chez toi avant même que tu n\'aies posé tes affaires."',
+              text: "Il pose enfin le téléphone sur la table de bois sombre avec un bruit sec. Ses yeux d'acier se plantent dans les vôtres. « Tu as cru que quelqu'un d'autre que moi avait le droit de te toucher ? »",
             },
             {
               id: 'choices1',
@@ -188,7 +188,7 @@ export default function ChatDemo({ isBetaUnlocked, onOpenForm }: ChatDemoProps) 
           setApiHistory([
             {
               role: 'assistant',
-              content: 'Il est assis derrière son immense bureau en acajou. Ses yeux sombres se lèvent lentement sur toi, t\'analysant de haut en bas sans un mot. Le silence de la pièce est lourd. "Tu es en retard," dit-il d\'une voix basse et tranchante. Il croise ses bras, adossé contre son fauteuil en cuir noir. Dehors, l\'alarme incendie retentit soudainement, mais il ne cille pas, maintenant un contact visuel magnétique. "Donne-moi une seule raison de ne pas te renvoyer chez toi avant même que tu n\'aies posé tes affaires."',
+              content: "La bibliothèque privée d'Adrian. L'odeur d'ambre et de bois brûlé est étouffante. Le silence dure depuis dix minutes. Adrian vous fixe sans un mot. Adrian est assis, sa chemise blanche entrouverte, les manches retroussées. Sur ses genoux repose votre téléphone portable à l'écran brisé. Il pose enfin le téléphone sur la table de bois sombre avec un bruit sec. Ses yeux d'acier se plantent dans les vôtres. « Tu as cru que quelqu'un d'autre que moi avait le droit de te toucher ? »",
             },
           ]);
         }, 5200);
@@ -206,19 +206,19 @@ export default function ChatDemo({ isBetaUnlocked, onOpenForm }: ChatDemoProps) 
             id: 'n1',
             role: 'assistant',
             type: 'narrator',
-            text: "Tu arrives en retard à ton entretien d'embauche. La porte est entrouverte. Il est là.",
+            text: "La bibliothèque privée d'Adrian. L'odeur d'ambre et de bois brûlé est étouffante. Le silence dure depuis dix minutes. Adrian vous fixe sans un mot.",
           },
           {
             id: 'msg1',
             role: 'assistant',
             type: 'incoming',
-            text: 'Il est assis derrière son immense bureau en acajou. Ses yeux sombres se lèvent lentement sur toi, t\'analysant de haut en bas sans un mot. Le silence de la pièce est lourd. "Tu es en retard," dit-il d\'une voix basse et tranchante.',
+            text: "Adrian est assis, sa chemise blanche entrouverte, les manches retroussées. Sur ses genoux repose votre téléphone portable à l'écran brisé.",
           },
           {
             id: 'msg2',
             role: 'assistant',
             type: 'incoming',
-            text: 'Il croise ses bras, adossé contre son fauteuil en cuir noir. Dehors, l\'alarme incendie retentit soudainement, mais il ne cille pas, maintenant un contact visuel magnétique. "Donne-moi une seule raison de ne pas te renvoyer chez toi avant même que tu n\'aies posé tes affaires."',
+            text: "Il pose enfin le téléphone sur la table de bois sombre avec un bruit sec. Ses yeux d'acier se plantent dans les vôtres. « Tu as cru que quelqu'un d'autre que moi avait le droit de te toucher ? »",
           },
           {
             id: 'choices1',
@@ -230,7 +230,7 @@ export default function ChatDemo({ isBetaUnlocked, onOpenForm }: ChatDemoProps) 
         setApiHistory([
           {
             role: 'assistant',
-            content: 'Il est assis derrière son immense bureau en acajou. Ses yeux sombres se lèvent lentement sur toi, t\'analysant de haut en bas sans un mot. Le silence de la pièce est lourd. "Tu es en retard," dit-il d\'une voix basse et tranchante. Il croise ses bras, adossé contre son fauteuil en cuir noir. Dehors, l\'alarme incendie retentit soudainement, mais il ne cille pas, maintenant un contact visuel magnétique. "Donne-moi une seule raison de ne pas te renvoyer chez toi avant même que tu n\'aies posé tes affaires."',
+            content: "La bibliothèque privée d'Adrian. L'odeur d'ambre et de bois brûlé est étouffante. Le silence dure depuis dix minutes. Adrian vous fixe sans un mot. Adrian est assis, sa chemise blanche entrouverte, les manches retroussées. Sur ses genoux repose votre téléphone portable à l'écran brisé. Il pose enfin le téléphone sur la table de bois sombre avec un bruit sec. Ses yeux d'acier se plantent dans les vôtres. « Tu as cru que quelqu'un d'autre que moi avait le droit de te toucher ? »",
           },
         ]);
       }
@@ -241,19 +241,19 @@ export default function ChatDemo({ isBetaUnlocked, onOpenForm }: ChatDemoProps) 
           id: 'n1',
           role: 'assistant',
           type: 'narrator',
-          text: "Tu arrives en retard à ton entretien d'embauche. La porte est entrouverte.",
+          text: "La bibliothèque privée d'Adrian. L'odeur d'ambre et de bois brûlé est étouffante. Le silence dure depuis dix minutes.",
         },
         {
           id: 'msg1',
           role: 'assistant',
           type: 'incoming',
-          text: 'Il est assis derrière son immense bureau en acajou. Ses yeux sombres se lèvent lentement sur toi, t\'analysant de haut en bas sans un mot. Le silence de la pièce est lourd. "Tu es en retard," dit-il d\'une voix basse et tranchante.',
+          text: "Adrian est assis, sa chemise blanche entrouverte, les manches retroussées. Sur ses genoux repose votre téléphone portable à l'écran brisé.",
         },
         {
           id: 'msg2',
           role: 'assistant',
           type: 'incoming',
-          text: 'Il croise ses bras, adossé contre son fauteuil en cuir noir. Dehors, l\'alarme incendie retentit soudainement, mais il ne cille pas, maintenant un contact visuel magnétique. "Donne-moi une seule raison de ne pas te renvoyer chez toi avant même que tu n\'aies posé tes affaires."',
+          text: "Il pose enfin le téléphone sur la table de bois sombre avec un bruit sec. Ses yeux d'acier se plantent dans les vôtres. « Tu as cru que quelqu'un d'autre que moi avait le droit de te toucher ? »",
         },
       ]);
     }
@@ -489,7 +489,7 @@ export default function ChatDemo({ isBetaUnlocked, onOpenForm }: ChatDemoProps) 
               </div>
               <div className="flex flex-col gap-[1px]">
                 <h1 className="text-[15px] font-semibold text-app-text tracking-[0.2px] leading-tight">
-                  Alexander Thorne
+                  Adrian Vance
                 </h1>
                 <span className="text-[11px] text-app-text-dim leading-tight flex items-center gap-1.5">
                   {headerStatus === 'Écrit...' && (
@@ -609,7 +609,7 @@ export default function ChatDemo({ isBetaUnlocked, onOpenForm }: ChatDemoProps) 
               <textarea
                 className="flex-1 bg-transparent border-none outline-none text-app-text text-[15px] resize-none min-h-[22px] max-h-[120px] leading-[1.4] no-scrollbar p-0 placeholder:text-app-text-dim focus:ring-0"
                 id="msgInput"
-                placeholder={isTyping ? 'Alexander répond...' : 'Réponds…'}
+                placeholder={isTyping ? 'Adrian répond...' : 'Réponds…'}
                 rows={1}
                 value={inputValue}
                 disabled={isTyping}
